@@ -21,27 +21,16 @@ st.markdown("""
 Sube varios videos, añade música, un texto de introducción y un logo para crear un video secuencial.
 """)
 
-# Función para verificar si ffmpeg está instalado
-def check_ffmpeg():
-    try:
-        subprocess.run(["ffmpeg", "-version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
-        return True
-    except (subprocess.CalledProcessError, FileNotFoundError):
-        return False
-
 # Función para crear video de introducción con texto
 def create_intro_video(text, output_path, duration=3, fps=24):
     width, height = 1280, 720
-    # Crear imagen de fondo
+    
+    # Crear imagen temporal con el texto
     img = Image.new('RGB', (width, height), color=(0, 0, 0))
     draw = ImageDraw.Draw(img)
     
-    # Intentar cargar una fuente, si no está disponible usar la predeterminada
-    try:
-        font_size = 60
-        font = ImageFont.truetype("arial.ttf", font_size)
-    except:
-        font = ImageFont.load_default()
+    # Usar fuente predeterminada
+    font = ImageFont.load_default()
     
     # Calcular posición del texto para centrarlo
     text_width, text_height = draw.textsize(text, font=font)
@@ -50,16 +39,27 @@ def create_intro_video(text, output_path, duration=3, fps=24):
     # Dibujar texto
     draw.text(position, text, fill=(255, 255, 255), font=font)
     
-    # Crear video
-    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-    video = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
+    # Guardar imagen temporal
+    temp_img_path = os.path.join(tempfile.gettempdir(), "intro_text.png")
+    img.save(temp_img_path)
     
-    # Añadir frames
-    for _ in range(duration * fps):
-        frame = np.array(img)
-        video.write(frame)
+    # Crear video con FFmpeg
+    cmd = [
+        "ffmpeg",
+        "-loop", "1",
+        "-i", temp_img_path,
+        "-c:v", "libx264",
+        "-t", str(duration),
+        "-pix_fmt", "yuv420p",
+        "-vf", f"scale={width}:{height}",
+        output_path
+    ]
     
-    video.release()
+    subprocess.run(cmd, check=True)
+    
+    # Eliminar imagen temporal
+    os.remove(temp_img_path)
+    
     return output_path
 
 # Función para crear video final con logo
@@ -83,16 +83,27 @@ def create_outro_video(logo_path, output_path, duration=3, fps=24):
     # Pegar logo
     img.paste(logo, position)
     
-    # Crear video
-    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-    video = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
+    # Guardar imagen temporal
+    temp_img_path = os.path.join(tempfile.gettempdir(), "outro_logo.png")
+    img.save(temp_img_path)
     
-    # Añadir frames
-    for _ in range(duration * fps):
-        frame = np.array(img)
-        video.write(frame)
+    # Crear video con FFmpeg
+    cmd = [
+        "ffmpeg",
+        "-loop", "1",
+        "-i", temp_img_path,
+        "-c:v", "libx264",
+        "-t", str(duration),
+        "-pix_fmt", "yuv420p",
+        "-vf", f"scale={width}:{height}",
+        output_path
+    ]
     
-    video.release()
+    subprocess.run(cmd, check=True)
+    
+    # Eliminar imagen temporal
+    os.remove(temp_img_path)
+    
     return output_path
 
 # Función para concatenar videos
@@ -146,11 +157,6 @@ def extract_audio(video_path, output_path):
     
     subprocess.run(cmd, check=True)
     return output_path
-
-# Verificar si ffmpeg está instalado
-if not check_ffmpeg():
-    st.error("FFmpeg no está instalado. Por favor, instálalo para usar esta aplicación.")
-    st.stop()
 
 # Crear directorios temporales
 temp_dir = tempfile.mkdtemp()
