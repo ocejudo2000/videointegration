@@ -21,6 +21,16 @@ st.markdown("""
 Sube varios videos, añade música, un texto de introducción y un logo para crear un video secuencial.
 """)
 
+# Función para obtener el tamaño del texto (compatible con diferentes versiones de Pillow)
+def get_text_size(draw, text, font):
+    try:
+        # Para versiones más nuevas de Pillow
+        bbox = draw.textbbox((0, 0), text, font=font)
+        return bbox[2] - bbox[0], bbox[3] - bbox[1]
+    except AttributeError:
+        # Para versiones más antiguas de Pillow
+        return draw.textsize(text, font=font)
+
 # Función para crear video de introducción con texto
 def create_intro_video(text, output_path, duration=3, fps=24):
     width, height = 1280, 720
@@ -33,7 +43,7 @@ def create_intro_video(text, output_path, duration=3, fps=24):
     font = ImageFont.load_default()
     
     # Calcular posición del texto para centrarlo
-    text_width, text_height = draw.textsize(text, font=font)
+    text_width, text_height = get_text_size(draw, text, font)
     position = ((width - text_width) // 2, (height - text_height) // 2)
     
     # Dibujar texto
