@@ -6,13 +6,14 @@ import shutil
 from PIL import Image, ImageDraw, ImageFont
 import numpy as np
 import time
-from pathlib import Path
+import sys
 
 # Configuración de la página
 st.set_page_config(
     page_title="Creador de Videos Secuenciales",
     page_icon="🎬",
-    layout="centered"
+    layout="centered",
+    initial_sidebar_state="collapsed"
 )
 
 # Título de la aplicación
@@ -33,140 +34,160 @@ def get_text_size(draw, text, font):
 
 # Función para crear video de introducción con texto
 def create_intro_video(text, output_path, duration=3, fps=24):
-    width, height = 1280, 720
-    
-    # Crear imagen temporal con el texto
-    img = Image.new('RGB', (width, height), color=(0, 0, 0))
-    draw = ImageDraw.Draw(img)
-    
-    # Usar fuente predeterminada
-    font = ImageFont.load_default()
-    
-    # Calcular posición del texto para centrarlo
-    text_width, text_height = get_text_size(draw, text, font)
-    position = ((width - text_width) // 2, (height - text_height) // 2)
-    
-    # Dibujar texto
-    draw.text(position, text, fill=(255, 255, 255), font=font)
-    
-    # Guardar imagen temporal
-    temp_img_path = os.path.join(tempfile.gettempdir(), "intro_text.png")
-    img.save(temp_img_path)
-    
-    # Crear video con FFmpeg
-    cmd = [
-        "ffmpeg",
-        "-loop", "1",
-        "-i", temp_img_path,
-        "-c:v", "libx264",
-        "-t", str(duration),
-        "-pix_fmt", "yuv420p",
-        "-vf", f"scale={width}:{height}",
-        output_path
-    ]
-    
-    subprocess.run(cmd, check=True)
-    
-    # Eliminar imagen temporal
-    os.remove(temp_img_path)
-    
-    return output_path
+    try:
+        width, height = 1280, 720
+        
+        # Crear imagen temporal con el texto
+        img = Image.new('RGB', (width, height), color=(0, 0, 0))
+        draw = ImageDraw.Draw(img)
+        
+        # Usar fuente predeterminada
+        font = ImageFont.load_default()
+        
+        # Calcular posición del texto para centrarlo
+        text_width, text_height = get_text_size(draw, text, font)
+        position = ((width - text_width) // 2, (height - text_height) // 2)
+        
+        # Dibujar texto
+        draw.text(position, text, fill=(255, 255, 255), font=font)
+        
+        # Guardar imagen temporal
+        temp_img_path = os.path.join(tempfile.gettempdir(), "intro_text.png")
+        img.save(temp_img_path)
+        
+        # Crear video con FFmpeg
+        cmd = [
+            "ffmpeg",
+            "-loop", "1",
+            "-i", temp_img_path,
+            "-c:v", "libx264",
+            "-t", str(duration),
+            "-pix_fmt", "yuv420p",
+            "-vf", f"scale={width}:{height}",
+            output_path
+        ]
+        
+        subprocess.run(cmd, check=True)
+        
+        # Eliminar imagen temporal
+        os.remove(temp_img_path)
+        
+        return output_path
+    except Exception as e:
+        st.error(f"Error al crear video de introducción: {str(e)}")
+        st.stop()
 
 # Función para crear video final con logo
 def create_outro_video(logo_path, output_path, duration=3, fps=24):
-    # Abrir logo
-    logo = Image.open(logo_path)
-    
-    # Redimensionar logo si es necesario
-    max_size = 400
-    if max(logo.size) > max_size:
-        ratio = max_size / max(logo.size)
-        logo = logo.resize((int(logo.size[0] * ratio), int(logo.size[1] * ratio)), Image.LANCZOS)
-    
-    # Crear imagen de fondo
-    width, height = 1280, 720
-    img = Image.new('RGB', (width, height), color=(0, 0, 0))
-    
-    # Calcular posición del logo para centrarlo
-    position = ((width - logo.size[0]) // 2, (height - logo.size[1]) // 2)
-    
-    # Pegar logo
-    img.paste(logo, position)
-    
-    # Guardar imagen temporal
-    temp_img_path = os.path.join(tempfile.gettempdir(), "outro_logo.png")
-    img.save(temp_img_path)
-    
-    # Crear video con FFmpeg
-    cmd = [
-        "ffmpeg",
-        "-loop", "1",
-        "-i", temp_img_path,
-        "-c:v", "libx264",
-        "-t", str(duration),
-        "-pix_fmt", "yuv420p",
-        "-vf", f"scale={width}:{height}",
-        output_path
-    ]
-    
-    subprocess.run(cmd, check=True)
-    
-    # Eliminar imagen temporal
-    os.remove(temp_img_path)
-    
-    return output_path
+    try:
+        # Abrir logo
+        logo = Image.open(logo_path)
+        
+        # Redimensionar logo si es necesario
+        max_size = 400
+        if max(logo.size) > max_size:
+            ratio = max_size / max(logo.size)
+            logo = logo.resize((int(logo.size[0] * ratio), int(logo.size[1] * ratio)), Image.LANCZOS)
+        
+        # Crear imagen de fondo
+        width, height = 1280, 720
+        img = Image.new('RGB', (width, height), color=(0, 0, 0))
+        
+        # Calcular posición del logo para centrarlo
+        position = ((width - logo.size[0]) // 2, (height - logo.size[1]) // 2)
+        
+        # Pegar logo
+        img.paste(logo, position)
+        
+        # Guardar imagen temporal
+        temp_img_path = os.path.join(tempfile.gettempdir(), "outro_logo.png")
+        img.save(temp_img_path)
+        
+        # Crear video con FFmpeg
+        cmd = [
+            "ffmpeg",
+            "-loop", "1",
+            "-i", temp_img_path,
+            "-c:v", "libx264",
+            "-t", str(duration),
+            "-pix_fmt", "yuv420p",
+            "-vf", f"scale={width}:{height}",
+            output_path
+        ]
+        
+        subprocess.run(cmd, check=True)
+        
+        # Eliminar imagen temporal
+        os.remove(temp_img_path)
+        
+        return output_path
+    except Exception as e:
+        st.error(f"Error al crear video final: {str(e)}")
+        st.stop()
 
 # Función para concatenar videos
 def concatenate_videos(video_paths, output_path):
-    # Crear archivo de lista para ffmpeg
-    list_file = os.path.join(tempfile.gettempdir(), "file_list.txt")
-    with open(list_file, "w") as f:
-        for video_path in video_paths:
-            f.write(f"file '{video_path}'\n")
-    
-    # Usar ffmpeg para concatenar
-    cmd = [
-        "ffmpeg",
-        "-f", "concat",
-        "-safe", "0",
-        "-i", list_file,
-        "-c", "copy",
-        output_path
-    ]
-    
-    subprocess.run(cmd, check=True)
-    os.remove(list_file)
-    return output_path
+    try:
+        # Crear archivo de lista para ffmpeg
+        list_file = os.path.join(tempfile.gettempdir(), "file_list.txt")
+        with open(list_file, "w") as f:
+            for video_path in video_paths:
+                f.write(f"file '{video_path}'\n")
+        
+        # Usar ffmpeg para concatenar
+        cmd = [
+            "ffmpeg",
+            "-f", "concat",
+            "-safe", "0",
+            "-i", list_file,
+            "-c", "copy",
+            output_path
+        ]
+        
+        subprocess.run(cmd, check=True)
+        os.remove(list_file)
+        return output_path
+    except Exception as e:
+        st.error(f"Error al concatenar videos: {str(e)}")
+        st.stop()
 
 # Función para añadir audio a un video
 def add_audio_to_video(video_path, audio_path, output_path):
-    cmd = [
-        "ffmpeg",
-        "-i", video_path,
-        "-i", audio_path,
-        "-c:v", "copy",
-        "-c:a", "aac",
-        "-map", "0:v:0",
-        "-map", "1:a:0",
-        "-shortest",
-        output_path
-    ]
-    
-    subprocess.run(cmd, check=True)
-    return output_path
+    try:
+        cmd = [
+            "ffmpeg",
+            "-i", video_path,
+            "-i", audio_path,
+            "-c:v", "copy",
+            "-c:a", "aac",
+            "-map", "0:v:0",
+            "-map", "1:a:0",
+            "-shortest",
+            output_path
+        ]
+        
+        subprocess.run(cmd, check=True)
+        return output_path
+    except Exception as e:
+        st.error(f"Error al añadir audio: {str(e)}")
+        st.stop()
 
 # Función para extraer audio de un video
 def extract_audio(video_path, output_path):
-    cmd = [
-        "ffmpeg",
-        "-i", video_path,
-        "-vn",
-        "-acodec", "mp3",
-        output_path
-    ]
-    
-    subprocess.run(cmd, check=True)
-    return output_path
+    try:
+        cmd = [
+            "ffmpeg",
+            "-i", video_path,
+            "-vn",
+            "-acodec", "mp3",
+            output_path
+        ]
+        
+        subprocess.run(cmd, check=True)
+        return output_path
+    except Exception as e:
+        st.error(f"Error al extraer audio: {str(e)}")
+        st.stop()
 
 # Crear directorios temporales
 temp_dir = tempfile.mkdtemp()
@@ -311,5 +332,8 @@ if submitted:
     )
     
     # Limpiar directorios temporales
-    shutil.rmtree(temp_dir)
-    shutil.rmtree(output_dir)
+    try:
+        shutil.rmtree(temp_dir)
+        shutil.rmtree(output_dir)
+    except:
+        pass
